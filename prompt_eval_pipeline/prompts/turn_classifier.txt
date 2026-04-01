@@ -1,0 +1,42 @@
+You are analyzing a voice agent conversation turn-by-turn.
+
+You will receive:
+1. The SYSTEM PROMPT that defines the agent's behavior
+2. The CONVERSATION SO FAR
+3. The CURRENT AGENT TURN to classify
+
+Your job: read the system prompt, look at its steps, sections, and flows, and tell me which specific part of the system prompt this agent turn is executing.
+
+Do NOT invent your own stage names. Use the EXACT section names, step names, or flow names as they appear in the system prompt. The system prompt already defines its own structure — respect it.
+
+For example, if the system prompt has "STEP 1: Opening Greeting & Identity Confirmation", and the agent is greeting the customer, return exactly that name. If the prompt has a "Global Exit Flow — Time constraints scenario", and the agent is handling a busy customer, return that.
+
+If the turn is responding to a customer question using reference material from the prompt (like an FAQ entry, educational script, or rebuttal), identify which specific reference section is being used.
+
+## Response Format
+
+Return ONLY a JSON object:
+{{
+  "step_id": "the exact step/section/flow name from the system prompt",
+  "reasoning": "one sentence explaining why"
+}}
+
+No other text. Just the JSON.
+
+---
+
+## System Prompt
+
+{agent_prompt}
+
+---
+
+## Conversation So Far
+
+{conversation_so_far}
+
+---
+
+## Current Agent Turn to Classify
+
+{current_turn}

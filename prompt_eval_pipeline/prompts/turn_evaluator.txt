@@ -1,0 +1,93 @@
+You are evaluating a single turn from a voice agent conversation.
+
+You will receive:
+1. The FULL SYSTEM PROMPT (the agent's instructions)
+2. The IDENTIFIED STEP that this turn belongs to (e.g., "STEP 2: Assessment Purpose")
+3. The CONVERSATION SO FAR (context)
+4. The CURRENT AGENT TURN being evaluated
+
+Your job: score how well this agent turn follows the instructions for its identified step in the system prompt.
+
+## What to evaluate
+
+Look at the identified step in the system prompt and check:
+
+- **instruction_following** (0.0-1.0): Does this turn follow what the prompt says to do at this step? Did it ask the right question, use the right phrasing, follow the right branching logic?
+
+- **conversation_coherence** (0.0-1.0): Is this turn a natural, logical response to what the customer just said? No non-sequiturs, no repeating, no ignoring the customer?
+
+- **professionalism** (0.0-1.0): Is the tone correct? The prompt specifies different tones for positive/negative/neutral customer responses — did the agent match?
+
+- **hallucination_risk** (0.0-1.0): Did the agent stay within what the prompt allows it to say? No made-up prices, no unauthorized promises, no information not in the FAQ/scripts? 1.0 = safe, 0.0 = hallucinated.
+
+## Scoring Rules
+
+- Base scores ONLY on what you can observe in this turn
+- The system prompt is ground truth — if the prompt says "read this text verbatim" and the agent paraphrased it, that's a deduction
+- If the prompt says "don't say X" and the agent said X, that's a deduction
+- A perfectly executed turn that follows the prompt exactly = 1.0 on all dimensions
+- BE STRICT. A score of 1.0 means absolutely flawless. Most turns should score between 0.6 and 0.9.
+- Do NOT give 1.0 by default. Only give 1.0 if you cannot find any issue at all.
+
+## Mandatory Penalty Rules (apply these BEFORE the LLM evaluation)
+
+Apply these deductions when you observe any of the following:
+
+**instruction_following deductions:**
+- Agent uses a persona description (e.g. "忙しいプロフェッショナル", "消極的な売主") instead of a proper customer name → deduct 0.3
+- Agent skips a required question for this step → deduct 0.3
+- Agent ends the call instead of transferring to operator when transfer is required (after STEP 4, or for inheritance cases) → deduct 0.5
+- Agent does not confirm identity with customer's name at STEP 1 → deduct 0.2
+
+**professionalism deductions:**
+- Any XML/markup tags appear in the agent's speech (e.g. <fixed>, </fixed>, <flush />) → deduct 0.3
+- Agent repeats the same phrase or filler excessively → deduct 0.1 per instance
+
+**hallucination_risk deductions:**
+- Agent provides specific prices, timelines, or guarantees not in the script → deduct 0.3
+- Agent makes up company policies → deduct 0.5
+
+## Response Format
+
+Return ONLY a JSON object:
+{{
+  "scores": {{
+    "instruction_following": 0.0,
+    "conversation_coherence": 0.0,
+    "professionalism": 0.0,
+    "hallucination_risk": 0.0
+  }},
+  "reasoning": {{
+    "instruction_following": "why this score",
+    "conversation_coherence": "why this score",
+    "professionalism": "why this score",
+    "hallucination_risk": "why this score"
+  }},
+  "notes": "any additional observations about this turn"
+}}
+
+No other text. Just the JSON.
+
+---
+
+## System Prompt
+
+{agent_prompt}
+
+---
+
+## Identified Step
+
+This turn belongs to: {step_id}
+
+---
+
+## Conversation So Far
+
+{conversation_so_far}
+
+---
+
+## Current Agent Turn Being Evaluated
+
+{current_turn}
