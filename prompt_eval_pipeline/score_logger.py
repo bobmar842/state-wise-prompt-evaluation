@@ -37,12 +37,19 @@ def aggregate_and_log(
     # Group turns by step
     step_scores = defaultdict(lambda: defaultdict(list))
     step_turns = defaultdict(list)
+    step_feedback = defaultdict(list)  # step -> list of per-turn feedback entries
 
     for tr in turn_results:
         step = tr["step_id"]
         step_turns[step].append(tr["turn_index"])
         for dim, score in tr["scores"].items():
             step_scores[step][dim].append(score)
+        # Collect reasoning and notes for feedback
+        step_feedback[step].append({
+            "turn_index": tr["turn_index"],
+            "reasoning": tr.get("reasoning", {}),
+            "notes": tr.get("notes", ""),
+        })
 
     # Aggregate per step
     per_step = {}
@@ -53,6 +60,19 @@ def aggregate_and_log(
             dim_means[dim] = round(sum(scores) / len(scores), 3) if scores else 0.0
         step_report["scores"] = dim_means
         step_report["overall"] = round(sum(dim_means.values()) / len(dim_means), 3) if dim_means else 0.0
+
+        # Concatenate all turn-level feedback into one block per step
+        feedback_parts = []
+        for fb in step_feedback[step]:
+            lines = [f"[Turn {fb['turn_index']}]"]
+            for dim, reason in fb["reasoning"].items():
+                if reason:
+                    lines.append(f"  {dim}: {reason}")
+            if fb["notes"]:
+                lines.append(f"  notes: {fb['notes']}")
+            feedback_parts.append("\n".join(lines))
+        step_report["feedback"] = "\n\n".join(feedback_parts)
+
         per_step[step] = step_report
 
     # Grand overall
@@ -122,7 +142,14 @@ def save_run_summary(all_reports: list[dict], run_id: str) -> str:
             {
                 "persona": r["persona_name"],
                 "overall": r["grand_overall"],
-                "steps": {s: d["overall"] for s, d in r["per_step_scores"].items()},
+                "steps": {
+                    s: {
+                        "overall": d["overall"],
+                        "scores": d.get("scores", {}),
+                        "feedback": d.get("feedback", ""),
+                    }
+                    for s, d in r["per_step_scores"].items()
+                },
             }
             for r in all_reports
         ],
